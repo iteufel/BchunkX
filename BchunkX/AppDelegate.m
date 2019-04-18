@@ -78,98 +78,96 @@ int swabaudio = 0;
 int towav = 0;
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-    // Insert code here to initialize your application
-    [self openFile:nil];
-}
-
-- (void)openBg{
+  [self openFile:nil];
 }
 
 - (IBAction)openFile:(id)sender{
-        NSString *binFilePath;
-        NSString *cueFilePath;
-        @autoreleasepool {
-            NSOpenPanel *openPanel = [[NSOpenPanel alloc]init];
-            openPanel.allowedFileTypes = @[@"bin"];
-            openPanel.allowsMultipleSelection = NO;
-            openPanel.allowsOtherFileTypes = NO;
-            openPanel.canChooseDirectories = NO;
-            openPanel.message = @"Select the .bin file";
-            if ( [openPanel runModal] == NSFileHandlingPanelOKButton){
-                binFilePath = [NSString stringWithString:openPanel.URL.path];
-            }
-            [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1.0]];
-        }
-        @autoreleasepool {
-            NSOpenPanel *openPanel = [[NSOpenPanel alloc]init];
-            openPanel.allowedFileTypes = @[@"cue"];
-            openPanel.allowsMultipleSelection = NO;
-            openPanel.allowsOtherFileTypes = NO;
-            openPanel.canChooseDirectories = NO;
-            openPanel.message = @"Select the .cue file";
-            if ( [openPanel runModal] == NSFileHandlingPanelOKButton){
-                cueFilePath = [NSString stringWithString:openPanel.URL.path];
-            }
-        }
-        binfile = (char *)[binFilePath UTF8String];
-        cuefile = (char *)[cueFilePath UTF8String];
-        basefile = (char *)[cueFilePath.stringByDeletingPathExtension UTF8String];
+   NSString *binFilePath;
+   NSString *cueFilePath;
+   @autoreleasepool {
+     NSOpenPanel *openPanel = [[NSOpenPanel alloc]init];
+     openPanel.allowedFileTypes = @[@"bin"];
+     openPanel.allowsMultipleSelection = NO;
+     openPanel.allowsOtherFileTypes = NO;
+     openPanel.canChooseDirectories = NO;
+     openPanel.message = @"Select the .bin file";
+     if ( [openPanel runModal] == NSFileHandlingPanelOKButton){
+       binFilePath = [NSString stringWithString:openPanel.URL.path];
+     }
+     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1.0]];
+   }
+   if(!binFilePath){
+     exit(0);
+   }
+   @autoreleasepool {
+     NSOpenPanel *openPanel = [[NSOpenPanel alloc]init];
+     openPanel.allowedFileTypes = @[@"cue"];
+     openPanel.allowsMultipleSelection = NO;
+     openPanel.allowsOtherFileTypes = NO;
+     openPanel.canChooseDirectories = NO;
+     openPanel.message = @"Select the .cue file";
+     if ( [openPanel runModal] == NSFileHandlingPanelOKButton){
+       cueFilePath = [NSString stringWithString:openPanel.URL.path];
+     }
+   }
+   if(!cueFilePath){
+     exit(0);
+   }
+   binfile = (char *)[binFilePath UTF8String];
+   cuefile = (char *)[cueFilePath UTF8String];
+   basefile = (char *)[cueFilePath.stringByDeletingPathExtension UTF8String];
     
     NSFileManager *fmngr = [NSFileManager defaultManager];
     if (![fmngr fileExistsAtPath:binFilePath] || ![fmngr fileExistsAtPath:cueFilePath]) {
-        NSAlert *alert = [[NSAlert alloc]init];
-        alert.informativeText = @"Can't find .bin or cue file";
-        [alert runModal];
-        exit(0);
-        return;
+      NSAlert *alert = [[NSAlert alloc]init];
+      alert.informativeText = @"Can't find .bin or cue file";
+      [alert runModal];
+      exit(0);
+      return;
     }
     _fnttxt.stringValue = [NSString stringWithFormat:@"Converting: %@",binFilePath.lastPathComponent];
-        [_window makeKeyAndOrderFront:self];
-        bgThread = [[NSThread alloc]initWithTarget:self selector:@selector(convertFile) object:nil];
-        [bgThread start];
-    
-        //[self performSelectorInBackground:@selector(convertFile) withObject:nil];
+    [_window makeKeyAndOrderFront:self];
+    bgThread = [[NSThread alloc]initWithTarget:self selector:@selector(convertFile) object:nil];
+    [bgThread start];
 }
 
 - (BOOL)application:(NSApplication *)sender printFile:(NSString *)filename{
-    return YES;
+  return YES;
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
-    // Insert code here to tear down your application
+  // Insert code here to tear down your application
 }
 
 //Convert a mins:secs:frames format to plain frames
 
 - (long)timeToFrames:(char *)s{
-    int mins = 0, secs = 0, frames = 0;
+  int mins = 0, secs = 0, frames = 0;
 	char *p, *t;
-	
 	if (!(p = strchr(s, ':')))
 		return -1;
+  
 	*p = '\0';
 	mins = atoi(s);
-	
 	p++;
 	if (!(t = strchr(p, ':')))
 		return -1;
+  
 	*t = '\0';
 	secs = atoi(p);
-	
 	t++;
 	frames = atoi(t);
-	
 	return 75 * (mins * 60 + secs) + frames;
 }
 
 - (IBAction)cancel:(id)sender{
-    [bgThread cancel];
+  [bgThread cancel];
 }
 
 //Parse the mode string
 
 - (void)getTrackMode:(struct track_t *)track and:(char *)modes{
-    static char ext_iso[] = "iso";
+  static char ext_iso[] = "iso";
 	static char ext_cdr[] = "cdr";
 	static char ext_wav[] = "wav";
 	static char ext_ugh[] = "ugh";
@@ -222,7 +220,7 @@ int towav = 0;
 }
 
 - (int)writeTrack:(struct track_t *)track :(FILE *)bf :(char* )bname{
-    char *fname;
+  char *fname;
 	FILE *f;
 	char buf[SECTLEN+10];
 	long sz, sect, realsz, reallen;
@@ -238,11 +236,10 @@ int towav = 0;
 	sprintf(fname, "%s%2.2d.%s", bname, track->num, track->extension);
 	
 	printf("%2d: %s ", track->num, fname);
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        _fnttxt.stringValue = [NSString stringWithFormat:@"Writing: %@",[NSString stringWithCString:fname encoding:NSUTF8StringEncoding]];
-    });
-    
-	
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    _fnttxt.stringValue = [NSString stringWithFormat:@"Writing: %@",[NSString stringWithCString:fname encoding:NSUTF8StringEncoding]];
+  });
+  
 	if (!(f = fopen(fname, "w"))) {
 		fprintf(stderr, " Could not fopen track file: %s\n", strerror(errno));
 		exit(4);
@@ -269,59 +266,63 @@ int towav = 0;
 		fputs("RIFF", f);
 		l = htolel(reallen + WAV_DATA_HLEN + WAV_FORMAT_HLEN + 4);
 		fwrite(&l, 4, 1, f);  // length of file, starting from WAVE
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
 		fputs("WAVE", f);
 		// FORMAT header
 		fputs("fmt ", f);
 		l = htolel(0x10);     // length of FORMAT header
 		fwrite(&l, 4, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });		i = htoles(0x01);     // constant
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+    i = htoles(0x01);     // constant
 		fwrite(&i, 2, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });		i = htoles(0x02);	// channels
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+    i = htoles(0x02);	// channels
 		fwrite(&i, 2, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });		l = htolel(44100);	// sample rate
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+    l = htolel(44100);	// sample rate
 		fwrite(&l, 4, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });		l = htolel(44100 * 4);	// bytes per second
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+    l = htolel(44100 * 4);	// bytes per second
 		fwrite(&l, 4, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });		i = htoles(4);		// bytes per sample
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+    i = htoles(4);		// bytes per sample
 		fwrite(&i, 2, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });		i = htoles(2*8);	// bits per channel
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+    i = htoles(2*8);	// bits per channel
 		fwrite(&i, 2, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });		// DATA header
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });		// DATA header
 		fputs("data", f);
 		l = htolel(reallen);
 		fwrite(&l, 4, 1, f);
-        _writtenBytes += l;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });	}
-    /*dispatch_sync(dispatch_get_main_queue(), ^{
-        [_progresIndicator display];
-    });*/
+    _writtenBytes += l;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+  }
 	realsz = 0;
 	sz = track->start;
 	sect = track->startsect;
@@ -347,21 +348,19 @@ int towav = 0;
 		}
 		sect++;
 		sz += SECTLEN;
-        _writtenBytes += SECTLEN;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            _progresIndicator.doubleValue = (double)_writtenBytes;
-        });
-        
+    _writtenBytes += SECTLEN;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      _progresIndicator.doubleValue = (double)_writtenBytes;
+    });
+
 		realsz += track->bsize;
 		if (((sz / SECTLEN) % 500) == 0) {
 			fl = (float)realsz / (float)reallen;
-			//printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b%4ld/%-4ld MB  [%s] %3.0f %%", realsz/1024/1024, reallen/1024/1024, progressbar(fl, 20), fl * 100);
 			fflush(stdout);
 		}
 	}
 	
 	fl = (float)realsz / (float)reallen;
-	//printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b%4ld/%-4ld MB  [%s] %3.0f %%", realsz/1024/1024, reallen/1024/1024, progressbar(1, 20), fl * 100);
 	fflush(stdout);
 	
 	if (ferror(bf)) {
@@ -378,32 +377,10 @@ int towav = 0;
 	return 0;
 }
 
-- (void)cleanupAndExit{
-   // [bgThread]
-}
+- (void)cleanupAndExit{}
 
 - (void)convertFile{
-    /*_progresIndicator.maxValue = 100;
-    _progresIndicator.minValue = 0;
-    _progresIndicator.doubleValue = 0;
-    for (int i = 0; i < 100; i++) {
-    
-        if([[NSThread currentThread] isCancelled]) {
-            [self performSelectorOnMainThread:@selector(cleanupAndExit) withObject:nil waitUntilDone:NO];
-            [NSThread exit];
-        }
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [_progresIndicator incrementBy:1];
-            
-        });
-        sleep(1);
-        
-    }
-    
-    return;*/
-    
-    char s[CUELLEN+1];
+  char s[CUELLEN+1];
 	char *p, *t;
 	int i, idx;
 	struct track_t *tracks = NULL;
@@ -412,8 +389,7 @@ int towav = 0;
 	struct track_t **prevp = &tracks;
 
 	FILE *binf, *cuef;
-    
-    if (!((binf = fopen(binfile, "r")))) {
+  if (!((binf = fopen(binfile, "r")))) {
 		fprintf(stderr, "Could not open BIN %s: %s\n", binfile, strerror(errno));
 		return;
 	}
@@ -423,24 +399,23 @@ int towav = 0;
 		return;
 	}
     
-    fseek (binf, 0, SEEK_END);
-    long int binSize = ftell(binf);
-    fseek (binf, 0, 0);
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        _progresIndicator.maxValue = (double)binSize;
-        _progresIndicator.minValue = 0;
-        _progresIndicator.doubleValue = 0;
-    });
+  fseek (binf, 0, SEEK_END);
+  long int binSize = ftell(binf);
+  fseek (binf, 0, 0);
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    _progresIndicator.maxValue = (double)binSize;
+    _progresIndicator.minValue = 0;
+    _progresIndicator.doubleValue = 0;
+  });
     
-    printf("Reading the CUE file:\n");
+  printf("Reading the CUE file:\n");
 	
 	/* We don't really care about the first line. */
 	if (!fgets(s, CUELLEN, cuef)) {
 		fprintf(stderr, "Could not read first line from %s: %s\n", cuefile, strerror(errno));
 		return;
 	}
-    
-    i = 0;
+  i = 0;
 	while (fgets(s, CUELLEN, cuef)) {
 		while ((p = strchr(s, '\r')) || (p = strchr(s, '\n')))
 			*p = '\0';
@@ -477,8 +452,7 @@ int towav = 0;
 			track->bsize = track->bstart = -1;
 			track->bsize = -1;
 			track->startsect = track->stopsect = -1;
-			
-            [self getTrackMode:track and:p];
+			[self getTrackMode:track and:p];
 			
 		} else if ((p = strstr(s, "INDEX"))) {
 			if (!(p = strchr(p, ' '))) {
@@ -510,29 +484,23 @@ int towav = 0;
 		track->stop = ftell(binf);
 		track->stopsect = track->stop / SECTLEN;
 	}
-    
-    printf("\n\n");
-	
-	
+  printf("\n\n");
 	printf("Writing tracks:\n\n");
 	for (track = tracks; (track); track = track->next){
-        _writtenBytes = (double)track->bsize;
-        [self writeTrack:track :binf :basefile];
-    }
-		
+    _writtenBytes = (double)track->bsize;
+    [self writeTrack:track :binf :basefile];
+  }
+
 	fclose(binf);
 	fclose(cuef);
-    
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        //[_window orderOut:nil];
-        NSUserNotification *noty = [[NSUserNotification alloc]init];
-        noty.title = @"BchunkX Done";
-        noty.informativeText = [NSString stringWithFormat:@"%lu Bytes written",_writtenBytes];
-        //noty.informativeText = @""
-        [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:noty];
-        exit(0);
-    });
-    return;
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    NSUserNotification *noty = [[NSUserNotification alloc]init];
+    noty.title = @"BchunkX Done";
+    noty.informativeText = [NSString stringWithFormat:@"%lu Bytes written",_writtenBytes];
+    [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:noty];
+    exit(0);
+  });
+  return;
 }
 
 @end
